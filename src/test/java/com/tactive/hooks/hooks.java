@@ -1,60 +1,41 @@
-package com.tactive.hooks;
+package com.tactive.stepDefinitions;
 
-//import com.microsoft.playwright.options.AriaRole;
+import com.microsoft.playwright.Page;
+import com.tactive.factory.DriverFactory;
 
 import io.cucumber.java.After;
 import io.cucumber.java.Before;
 import io.cucumber.java.Scenario;
 
-import com.microsoft.playwright.Browser;
-import com.microsoft.playwright.BrowserContext;
-import com.microsoft.playwright.BrowserType;
-//import com.tactive.utils.config.ConfigReader;
-//import com.microsoft.playwright.Locator;
-import com.microsoft.playwright.Page;
-import com.microsoft.playwright.Playwright;
+public class Hooks {
 
-public class hooks {
+    @Before(order = 0)
+    public void launchBrowser(Scenario scenario) {
 
-    private static Playwright playwright;
-    private static Browser browser;
-    private static BrowserContext context;
-    private static Page page;
+        // Scenarios tagged @freshLogin get a clean, unauthenticated context
+        // (used for the real login-form flow). Everything else reuses
+        // auth.json if it's present, to skip login.
+        boolean useSavedSession = !scenario.getSourceTagNames().contains("@freshLogin");
 
-    @Before
-    public void setUp() {
-        playwright = Playwright.create();
-
-        browser = playwright.chromium().launch(
-            new BrowserType.LaunchOptions()
-                .setHeadless(true)
-        );
-
-        context = browser.newContext();
-        page = context.newPage();
+        DriverFactory.initDriver("chrome", useSavedSession);
     }
 
-    @After
-    public void tearDown(Scenario scenario) {
+    @After(order = 0)
+    public void quitBrowser(Scenario scenario) {
 
-        if (scenario.isFailed()) {
-            byte[] screenshot = page.screenshot(
-                new Page.ScreenshotOptions().setFullPage(true)
-            );
-
-            scenario.attach(
-                screenshot,
-                "image/png",
-                "Failure Screenshot"
-            );
+        // Screenshot and cleanup live in one method, so the screenshot is always
+        // taken from the scenario's own page before the browser is closed.
+        try {
+            Page page = DriverFactory.getPage();
+            if (scenario.isFailed() && page != null) {
+                byte[] screenshot = page.screenshot(
+                        new Page.ScreenshotOptions().setFullPage(true));
+                scenario.attach(screenshot, "image/png", "Failure Screenshot");
+            }
+        } catch (Exception e) {
+            System.out.println("Could not capture failure screenshot: " + e.getMessage());
+        } finally {
+            DriverFactory.quitDriver();
         }
-
-        context.close();
-        browser.close();
-        playwright.close();
-    }
-
-    public static Page getPage() {
-        return page;
     }
 }
