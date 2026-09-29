@@ -1,0 +1,49 @@
+# Maven build output
+target/
+dependency-reduced-pom.xml
+
+# Test run output (reports, screenshots, created document IDs)
+screenshots/
+test-results/
+playwright-report/
+blob-report/
+test-output/
+
+# Authenticated browser state
+auth.json
+**/auth.json
+
+# Environment configuration and secrets (keep only the example template)
+.env
+.env.*
+!.env.example
+env/.env
+env/.env.*
+!env/.env.example
+
+# GitLab CI caches (Maven repository and Playwright browsers, created inside the project folder)
+.m2/
+.cache/
+
+# Java, VS Code and IDE output
+*.class
+bin/
+out/
+.classpath
+.project
+.settings/
+.vscode/
+.idea/
+*.iml
+
+# Generated modernization workspace
+/.github/modernize/java-upgrade/**
+
+# Packaged deliverables
+/*.zip
+
+# OS files and logs
+.DS_Store
+Thumbs.db
+desktop.ini
+*.log

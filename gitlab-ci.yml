@@ -1,0 +1,43 @@
+# GitLab CI pipeline: runs the @smoke tests on every Git push.
+# Required CI/CD variables (Settings > CI/CD > Variables):
+#   TACTIVE_BASE_URL, TACTIVE_USERNAME, TACTIVE_PASSWORD
+
+image: maven:3.9-eclipse-temurin-25
+
+stages:
+  - test
+
+variables:
+  MAVEN_OPTS: "-Dmaven.repo.local=$CI_PROJECT_DIR/.m2/repository"
+  PLAYWRIGHT_BROWSERS_PATH: "$CI_PROJECT_DIR/.cache/ms-playwright"
+
+cache:
+  key: maven-playwright
+  paths:
+    - .m2/repository/
+    - .cache/ms-playwright/
+
+smoke-tests:
+  stage: test
+  rules:
+    - if: '$CI_PIPELINE_SOURCE == "push"'
+  before_script:
+    # Build env/.env.stage from the CI variables (the file is git-ignored, so it is created here)
+    - mkdir -p env
+    - printf 'TACTIVE_BASE_URL=%s\nTACTIVE_USERNAME=%s\nTACTIVE_PASSWORD=%s\n' "$TACTIVE_BASE_URL" "$TACTIVE_USERNAME" "$TACTIVE_PASSWORD" > env/.env.stage
+    # Install Chromium and its Linux dependencies
+    - mvn -B -q exec:java "-Dexec.classpathScope=test" "-Dexec.mainClass=com.microsoft.playwright.CLI" "-Dexec.args=install --with-deps chromium"
+  script:
+    - mvn -B clean test "-Dcucumber.filter.tags=@smoke and not @local-only"
+  after_script:
+    - rm -f env/.env.stage auth.json
+  artifacts:
+    when: always
+    expire_in: 14 days
+    paths:
+      - target/cucumber-reports/
+      - target/surefire-reports/
+      - target/screenshots/
+      - test-output/
+    reports:
+      junit: target/surefire-reports/TEST-*.xml
