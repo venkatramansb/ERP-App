@@ -236,5 +236,5 @@ Failure evidence is taken from the page used by the scenario and tied to that sc
 | Modules 2 to 4 | Build on `TS01-M2-01` and `TS01-M4-01`, and apply the Module 1 patterns when the remaining scenarios are picked up: one page object per DocType, one step class per module, `TS01-` data and drafts only |
 | Smoke set | Tag the navigation and workspace checks, such as `TS01-M2-06`, `TS01-M3-05`, `TS01-M4-01` and `TS01-M4-05`, for routine CI feedback |
 | Tags | Add module tags (`@M1` to `@M4`) and `@validation` to the feature files |
-| Browser lifecycle | Keep a single scenario-scoped owner and take failure screenshots from the scenario's own page |
+| Browser lifecycle | In place: `hooks.Hooks` owns the browser and takes failure screenshots from the scenario's own page. Keep it as the standard for new scenarios |
 | Parallel runs | Enable when scenario-level isolation is in place |

@@ -1,4 +1,4 @@
-package com.tactive.stepDefinitions;
+package com.tactive.hooks;
 
 import com.microsoft.playwright.Page;
 import com.tactive.factory.DriverFactory;

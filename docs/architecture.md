@@ -43,11 +43,10 @@ flowchart TD
 	Config --> Env[env/.env.stage]
 	AuthManager --> State[auth.json storage state]
 	State --> Factory[DriverFactory BrowserContext]
-	ScenarioHook[stepDefinitions.Hooks] --> Factory
+	ScenarioHook[hooks.Hooks Before and After] --> Factory
 	Factory --> PW
 
-	LegacyHook[hooks.hooks] --> ExtraBrowser[Chromium lifecycle for failure screenshots]
-	ExtraBrowser -. failed-scenario screenshot .-> CucumberReport[Cucumber HTML report]
+	PW -. failed-scenario screenshot .-> CucumberReport[Cucumber HTML report]
 	Runner --> CucumberReport
 	TestData[src/test/resources/testdata] --> Glue
 	Glue --> Output[test-output and target]
@@ -65,7 +64,7 @@ flowchart TD
 | `pages/` | Page objects that hold locators and reusable UI actions for login, leads/opportunities, invoicing and projects. Each receives a Playwright `Page`. |
 | `baseLocator/basePage.java` | Shared locator/helper base, created and ready for adoption. Workflow page objects currently hold their own locators and can extend it as common Frappe helpers emerge. `baseTest.java` is reserved for shared test setup. |
 | `factory/DriverFactory.java` | Owns thread-local Playwright, browser, context and page instances. Selects Chromium, Firefox or WebKit by name (scenarios currently request Chromium). Loads `auth.json` unless the scenario is tagged `@freshLogin`. |
-| `hooks/` and `stepDefinitions/Hooks.java` | Suite-level auth preparation, scenario-level browser lifecycle, and failed-scenario screenshots. Both packages are registered as Cucumber glue. |
+| `hooks/` | `AuthHooks` prepares authentication once per suite. `Hooks` owns the scenario browser lifecycle and takes failed-scenario screenshots through `DriverFactory`. The package is registered as Cucumber glue. |
 | `utils/AuthStateManager.java` | Performs a headless Chromium login when `auth.json` is missing and saves the storage state for later contexts. |
 | `utils/config/ConfigReader.java` | Loads `env/.env.stage` and exposes the base URL (`getBaseUrl()`) and credentials through `get(key)`. |
 | `src/test/resources/features/` | Feature files for login, invoicing, lead CRUD, project CRUD and the sample upload. |
@@ -172,9 +171,10 @@ The full command catalogue is in [`execution-strategy.md`](execution-strategy.md
 1. Surefire discovers the JUnit suite and starts the Cucumber engine.
 2. Cucumber loads feature files from `src/test/resources/features` and uses glue from `com.tactive.stepDefinitions` and `com.tactive.hooks`.
 3. `AuthHooks.ensureAuthenticated()` runs once before scenarios. If `auth.json` does not exist, `AuthStateManager` reads `env/.env.stage`, logs in and creates the storage-state file.
-4. For each scenario, `stepDefinitions.Hooks` initialises `DriverFactory`. The `@freshLogin` tag requests a new context without loading saved storage state; other scenarios reuse `auth.json` when present.
+4. For each scenario, `hooks.Hooks` initialises `DriverFactory`. The `@freshLogin` tag requests a new context without loading saved storage state; other scenarios reuse `auth.json` when present.
 5. Step definitions get the factory's `Page` and pass it to the workflow page objects.
-6. Cucumber writes the HTML report under `target/cucumber-reports/`.
+6. When a scenario fails, `Hooks` attaches a screenshot taken from the same page to the report, then closes the browser.
+7. Cucumber writes the HTML report under `target/cucumber-reports/`.
 
 ---
 
@@ -200,13 +200,39 @@ The suite runs end to end today. These are the next steps that will make it easi
 | Area | Where we are | Next step |
 | --- | --- | --- |
 | **Module 1** | Complete, with the list check covered inside M1-02 | Use it as the reference for later modules |
-| **Single browser lifecycle** | `stepDefinitions.Hooks` manages the scenario browser through `DriverFactory`, and `hooks.hooks` also starts Chromium for failure screenshots | Take the failure screenshot from the scenario's own `Page` so one class owns the browser lifecycle |
+| **Single browser lifecycle** | Done: `hooks.Hooks` owns the scenario browser through `DriverFactory` and takes failure screenshots from the same page | Keep this as the standard for new scenarios (see 9.1) |
 | **Authoritative assertions** | Lead steps assert on form state and fail the scenario when it is unmet. The invoicing and project success steps currently log their outcome | Move those checks to assertions, following the lead pattern |
 | **Clean-login scenarios** | `@freshLogin` skips loading storage state | Let suite-level auth setup skip `@freshLogin` runs, so a clean-login test never depends on a pre-generated `auth.json` |
 | **Parallel execution** | `DriverFactory` is thread-local and lead data is unique per run | Add Cucumber parallel configuration once hook state and output files are isolated per scenario |
 | **Base page adoption** | `basePage` is created and ready to use | Have workflow page objects extend it as common actions emerge (waits, list search, save-and-verify) |
 | **Upload feature** | The sample upload feature and its data file are ready | Add the matching step-definition class |
 | **Modules 2 to 4** | `TS01-M2-01` and `TS01-M4-01` are in place, and the scenario plan and tags are defined | Reuse the Module 1 patterns: page object per DocType, one step class per module, `TS01-` data, drafts only |
+
+### 9.1 Browser lifecycle
+
+Each scenario runs on one browser. `hooks.Hooks` creates it through `DriverFactory`, and both the steps and the failure screenshot use that same page. This replaced an earlier legacy hook that started a second Chromium just to take screenshots.
+
+```mermaid
+flowchart TD
+	Sc[Cucumber scenario] --> H["hooks.Hooks: Before and After"]
+	H --> DF[DriverFactory]
+	DF --> BC[BrowserContext]
+	BC --> P[Page]
+	P --> St[Steps]
+	P --> Sh[Failure screenshot attached to the report]
+	St --> Pg[Page objects]
+	Pg --> BP[basePage]
+	BP --> PW[Playwright]
+```
+
+What this gives the suite:
+
+- The screenshot shows the exact page state at the point of failure.
+- One browser per scenario, so runs start faster and use less memory.
+- Cleanup happens in one place, which also suits parallel execution.
+- The screenshot is attached to the Cucumber report next to the failed scenario.
+
+`basePage` is created and ready. The page objects will sit on top of it as shared Frappe helpers are consolidated (see [`locator-strategy.md`](locator-strategy.md)).
 
 ---
 
