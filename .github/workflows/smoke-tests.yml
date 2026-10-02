@@ -43,6 +43,25 @@ jobs:
           printf 'TACTIVE_BASE_URL=%s\nTACTIVE_USERNAME=%s\nTACTIVE_PASSWORD=%s\n' \
             "$TACTIVE_BASE_URL" "$TACTIVE_USERNAME" "$TACTIVE_PASSWORD" > env/.env.stage
 
+      - name: Verify stage environment configuration
+        run: |
+          test -s env/.env.stage || {
+            echo "Environment file is missing or empty"
+            exit 1
+          }
+
+          grep -q '^TACTIVE_BASE_URL=.' env/.env.stage \
+            && echo "Base URL is present" \
+            || { echo "Base URL is missing or empty"; exit 1; }
+
+          grep -q '^TACTIVE_USERNAME=.' env/.env.stage \
+            && echo "Username is present" \
+            || { echo "Username is missing or empty"; exit 1; }
+
+          grep -q '^TACTIVE_PASSWORD=.' env/.env.stage \
+            && echo "Password is present" \
+            || { echo "Password is missing or empty"; exit 1; }
+
       - name: Install Chromium and its dependencies
         run: >
           mvn -B -q exec:java
