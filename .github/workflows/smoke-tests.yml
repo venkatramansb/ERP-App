@@ -65,13 +65,21 @@ jobs:
           fi
           echo "✅ env/.env.stage created successfully."
 
-      # FIX: Installs system dependencies automatically using the official Playwright Tooling
-      - name: Install Playwright Browsers and Linux OS Dependencies
+      # Step 1: Install the Chromium browser binaries
+      - name: Install Chromium Browser
         run: |
           mvn exec:java -e \
             -Dexec.classpathScope=test \
             -Dexec.mainClass=com.microsoft.playwright.CLI \
-            -Dexec.args="install --with-deps chromium"
+            -Dexec.args="install chromium"
+
+      # Step 2: FIX - Force installation of system dependencies with sudo privileges
+      - name: Install Host Linux Dependencies
+        run: |
+          sudo mvn exec:java -e \
+            -Dexec.classpathScope=test \
+            -Dexec.mainClass=com.microsoft.playwright.CLI \
+            -Dexec.args="install-deps"
 
       # Runs the smoke tests in headless mode
       - name: Run smoke tests
