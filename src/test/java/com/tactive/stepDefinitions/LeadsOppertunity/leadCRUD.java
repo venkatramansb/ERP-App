@@ -39,8 +39,8 @@ public class leadCRUD {
 
     // ======================= EXISTING STEPS (unchanged) =======================
 
-    @When("i went on to click add lead navgiated")
-    public void i_went_on_to_click_add_lead_navgiated() {
+        @Given("i went on to click add lead")
+    public void i_went_on_to_click_add_lead() {
         String baseUrl = ConfigReader.getBaseUrl();
         DriverFactory.getPage().navigate(baseUrl + "/desk/lead");
 
@@ -159,8 +159,19 @@ public class leadCRUD {
         lastCreatedDocId = String.valueOf(name);
     }
 
-    @Then("I record the created lead document ID")
+       @Then("I record the created lead document ID")
     public void i_record_the_created_lead_document_id() throws IOException {
+        // If the save step has not captured the ID yet, wait for the save to finish
+        // and read the document name from the form
+        if (lastCreatedDocId == null) {
+            Page page = DriverFactory.getPage();
+            page.waitForFunction(
+                    "() => window.cur_frm && cur_frm.doc && !cur_frm.doc.__islocal",
+                    null,
+                    new Page.WaitForFunctionOptions().setTimeout(15000));
+            lastCreatedDocId = String.valueOf(page.evaluate("() => cur_frm.doc.name"));
+        }
+
         Assertions.assertNotNull(lastCreatedDocId, "No lead document ID available to record!");
         String line = lastCreatedDocId + " | " + lastCreatedOrganization + System.lineSeparator();
         synchronized (FILE_LOCK) {
