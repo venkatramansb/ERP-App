@@ -7,12 +7,12 @@ Feature: TS01-M1 Lead creation and validation
   # Session comes from saved storage state (@loginStorage), so no UI login step is needed.
   # All test data uses the "TS01-" prefix so it is easy to find, filter and clean up.
 
-  @TS01-M1-01 @smoke @ci
+ @TS01-M1-01 @smoke @ci
   Scenario: TS01-M1-01 Open New Lead form and verify defaults
-    Given i went on to click add lead navgiated
+    Given i went on to click add lead
     Then assert Series CRM-LEAD-.YYYY.- and Status default.
 
-  @TS01-M1-02 @smoke @ci @createData
+ @TS01-M1-02 @smoke @ci @createData
   Scenario: TS01-M1-02 Create Lead (happy path)
     Given i went on to click add lead
     When I fill the lead form with first name "TS01-Fname", organization "TS01-Org", email "ts01.lead@example.com" and status "Lead"
