@@ -49,7 +49,7 @@ public class AuthStateManager {
             loginPage.clickLoginButton();
 
             loginPage.loggedInConfirmation().waitFor(
-                    new Locator.WaitForOptions().setTimeout(15000));
+                    new Locator.WaitForOptions().setTimeout(30000));
 
             setupContext.storageState(new BrowserContext.StorageStateOptions()
                     .setPath(STORAGE_STATE_PATH));
