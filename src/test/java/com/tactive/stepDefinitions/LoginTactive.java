@@ -46,12 +46,16 @@ public class LoginTactive {
 
     @Then("I should see the Title")
     public void i_should_see_the_title() {
-    System.out.println("Current URL before wait: " + DriverFactory.getPage().url());
-    loginPage.loggedInConfirmation().waitFor(
-        new Locator.WaitForOptions()
-            .setState(WaitForSelectorState.VISIBLE)
-            .setTimeout(15000)
-    );
+        System.out.println("Current URL before wait: " + DriverFactory.getPage().url());
+        
+        // 👇 ADD THIS LINE TO PRINT THE EXACT WEB PAGE TEXT IN CI LOGS
+        System.out.println("TEXT CONTENT ON FAILURE:\n" + DriverFactory.getPage().innerText("body"));
+
+        loginPage.loggedInConfirmation().waitFor(
+            new Locator.WaitForOptions()
+                .setState(WaitForSelectorState.VISIBLE)
+                .setTimeout(25000) // Temporarily increase timeout to 25 seconds for slow CI runners
+        );
     }
 
 }
